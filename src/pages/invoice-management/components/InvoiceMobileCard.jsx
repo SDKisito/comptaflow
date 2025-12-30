@@ -77,7 +77,7 @@ const InvoiceMobileCard = ({ invoice, isSelected, onSelect, onView, onEdit, onDu
             onClick={() => onView(invoice)}
             title="Voir"
           >
-            <Icon name="eye" size={18} color="var(--color-foreground)" />
+            <Icon name="Eye" size={18} color="var(--color-foreground)" />
           </Button>
           <Button
             variant="ghost"
@@ -85,7 +85,7 @@ const InvoiceMobileCard = ({ invoice, isSelected, onSelect, onView, onEdit, onDu
             onClick={() => onEdit(invoice)}
             title="Modifier"
           >
-            <Icon name="edit" size={18} color="var(--color-foreground)" />
+            <Icon name="Edit" size={18} color="var(--color-foreground)" />
           </Button>
           {!isDraft && invoice?.status !== 'Payée' && (
             <Button
@@ -94,7 +94,7 @@ const InvoiceMobileCard = ({ invoice, isSelected, onSelect, onView, onEdit, onDu
               onClick={() => onSend(invoice)}
               title="Envoyer"
             >
-              <Icon name="send" size={18} color="var(--color-primary)" />
+              <Icon name="Send" size={18} color="var(--color-primary)" />
             </Button>
           )}
           {invoice?.status !== 'Payée' && !isDraft && (
@@ -104,14 +104,14 @@ const InvoiceMobileCard = ({ invoice, isSelected, onSelect, onView, onEdit, onDu
               onClick={() => onMarkPaid(invoice)}
               title="Marquer payée"
             >
-              <Icon name="checkCircle" size={18} color="var(--color-success)" />
+              <Icon name="CheckCircle" size={18} color="var(--color-success)" />
             </Button>
           )}
           <Button
             variant="ghost"
             size="sm"
             onClick={handleDownloadPDF}
-            iconName="download"
+            iconName="Download"
             title="Télécharger PDF"
           />
         </div>
