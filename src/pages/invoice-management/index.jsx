@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import NavigationSidebar from '../../components/ui/NavigationSidebar';
 import BreadcrumbTrail from '../../components/ui/BreadcrumbTrail';
 import Button from '../../components/ui/Button';
@@ -13,12 +13,17 @@ import BulkActionsBar from './components/BulkActionsBar';
 import InvoiceStatsCards from './components/InvoiceStatsCards';
 
 import { trackFeature, trackEngagement } from '../../utils/analytics';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 const InvoiceManagement = () => {
+  const { user } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedInvoices, setSelectedInvoices] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [realInvoices, setRealInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     invoiceNumber: '',
     client: 'all',
@@ -30,9 +35,52 @@ const InvoiceManagement = () => {
     search: ''
   });
 
+  // Charger les factures depuis Supabase
+  useEffect(() => {
+    if (user?.id) {
+      loadInvoices();
+    }
+  }, [user]);
+
+  const loadInvoices = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Transformez les données pour correspondre au format attendu
+      const transformedInvoices = (data || []).map(invoice => ({
+        id: invoice.id,
+        invoiceNumber: invoice.invoice_number || 'N/A',
+        clientName: invoice.client_name || 'Client inconnu',
+        clientEmail: invoice.client_email || '',
+        clientAddress: invoice.client_address || '',
+        issueDate: invoice.issue_date || new Date().toISOString().split('T')[0],
+        dueDate: invoice.due_date || new Date().toISOString().split('T')[0],
+        amount: parseFloat(invoice.total_amount || 0),
+        tvaRate: parseFloat(invoice.tax_rate || 20),
+        status: invoice.status || 'Brouillon',
+        items: invoice.items || [],
+        paymentHistory: invoice.payment_history || [],
+        notes: invoice.notes || ''
+      }));
+      
+      setRealInvoices(transformedInvoices);
+    } catch (error) {
+      console.error('Erreur lors du chargement des factures:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const mockInvoices = [
     {
-      id: 1,
+      id: 'mock-1',
       invoiceNumber: 'FAC-2024-001',
       clientName: 'Entreprise Martin SARL',
       clientEmail: 'contact@martin-sarl.fr',
@@ -52,7 +100,7 @@ const InvoiceManagement = () => {
       notes: 'Paiement reçu avec remerciements. Prochain rendez-vous prévu en janvier 2025.'
     },
     {
-      id: 2,
+      id: 'mock-2',
       invoiceNumber: 'FAC-2024-002',
       clientName: 'Société Dupont & Fils',
       clientEmail: 'admin@dupont-fils.fr',
@@ -69,7 +117,7 @@ const InvoiceManagement = () => {
       notes: 'Facture envoyée par email le 05/12/2024. Rappel automatique prévu le 20/12/2024.'
     },
     {
-      id: 3,
+      id: 'mock-3',
       invoiceNumber: 'FAC-2024-003',
       clientName: 'Cabinet Lefebvre',
       clientEmail: 'contact@cabinet-lefebvre.fr',
@@ -86,7 +134,7 @@ const InvoiceManagement = () => {
       notes: 'Paiement en retard de 4 jours. Relance envoyée le 21/12/2024.'
     },
     {
-      id: 4,
+      id: 'mock-4',
       invoiceNumber: 'FAC-2024-004',
       clientName: 'Boutique Bernard',
       clientEmail: 'info@boutique-bernard.fr',
@@ -104,79 +152,14 @@ const InvoiceManagement = () => {
         { date: '2024-12-18', amount: 1600.00, method: 'Chèque' }
       ],
       notes: 'Paiement partiel reçu. Solde restant: 1 920,00 € TTC.'
-    },
-    {
-      id: 5,
-      invoiceNumber: 'FAC-2024-005',
-      clientName: 'Restaurant Le Gourmet',
-      clientEmail: 'direction@legourmet.fr',
-      clientAddress: '56 Quai des Belges, 13001 Marseille',
-      issueDate: '2024-12-15',
-      dueDate: '2025-01-15',
-      amount: 2100.00,
-      tvaRate: 20,
-      status: 'Envoyée',
-      items: [
-        { description: 'Comptabilité mensuelle restaurant', quantity: 1, unitPrice: 1500.00, total: 1500.00 },
-        { description: 'Gestion TVA restauration', quantity: 1, unitPrice: 600.00, total: 600.00 }
-      ],
-      notes: 'Facture envoyée le 15/12/2024. Client habituel avec historique de paiement ponctuel.'
-    },
-    {
-      id: 6,
-      invoiceNumber: 'FAC-2024-006',
-      clientName: 'Entreprise Martin SARL',
-      clientEmail: 'contact@martin-sarl.fr',
-      clientAddress: '45 Avenue des Champs-Élysées, 75008 Paris',
-      issueDate: '2024-12-18',
-      dueDate: '2025-01-18',
-      amount: 1750.00,
-      tvaRate: 20,
-      status: 'Brouillon',
-      items: [
-        { description: 'Consultation stratégie fiscale', quantity: 1, unitPrice: 1200.00, total: 1200.00 },
-        { description: 'Analyse financière', quantity: 1, unitPrice: 550.00, total: 550.00 }
-      ],
-      notes: 'Brouillon en cours de finalisation. À envoyer après validation client.'
-    },
-    {
-      id: 7,
-      invoiceNumber: 'FAC-2024-007',
-      clientName: 'Société Dupont & Fils',
-      clientEmail: 'admin@dupont-fils.fr',
-      clientAddress: '12 Rue de la République, 69002 Lyon',
-      issueDate: '2024-11-15',
-      dueDate: '2024-12-15',
-      amount: 5600.00,
-      tvaRate: 20,
-      status: 'En retard',
-      items: [
-        { description: 'Bilan comptable annuel', quantity: 1, unitPrice: 4200.00, total: 4200.00 },
-        { description: 'Liasse fiscale', quantity: 1, unitPrice: 1400.00, total: 1400.00 }
-      ],
-      notes: 'Paiement en retard de 9 jours. Deuxième relance envoyée.'
-    },
-    {
-      id: 8,
-      invoiceNumber: 'FAC-2024-008',
-      clientName: 'Cabinet Lefebvre',
-      clientEmail: 'contact@cabinet-lefebvre.fr',
-      clientAddress: '78 Boulevard Haussmann, 75009 Paris',
-      issueDate: '2024-12-20',
-      dueDate: '2025-01-20',
-      amount: 2900.00,
-      tvaRate: 20,
-      status: 'Envoyée',
-      items: [
-        { description: 'Révision comptable semestrielle', quantity: 1, unitPrice: 2200.00, total: 2200.00 },
-        { description: 'Conseil juridique fiscal', quantity: 1, unitPrice: 700.00, total: 700.00 }
-      ],
-      notes: 'Facture envoyée le 20/12/2024. Échéance dans 30 jours.'
     }
   ];
 
+  // Combiner les factures mockées et réelles
+  const allInvoices = [...mockInvoices, ...realInvoices];
+
   const filteredInvoices = useMemo(() => {
-    return mockInvoices?.filter(invoice => {
+    return allInvoices?.filter(invoice => {
       if (filters?.invoiceNumber && !invoice?.invoiceNumber?.toLowerCase()?.includes(filters?.invoiceNumber?.toLowerCase())) {
         return false;
       }
@@ -214,18 +197,18 @@ const InvoiceManagement = () => {
       }
       return true;
     });
-  }, [filters]);
+  }, [filters, allInvoices]);
 
   const stats = useMemo(() => {
     return {
-      totalInvoices: mockInvoices?.length,
-      totalAmount: mockInvoices?.reduce((sum, inv) => sum + inv?.amount, 0),
-      paidInvoices: mockInvoices?.filter(inv => inv?.status === 'Payée')?.length,
-      pendingInvoices: mockInvoices?.filter(inv => inv?.status === 'Envoyée')?.length,
-      overdueInvoices: mockInvoices?.filter(inv => inv?.status === 'En retard')?.length,
-      draftInvoices: mockInvoices?.filter(inv => inv?.status === 'Brouillon')?.length
+      totalInvoices: allInvoices?.length,
+      totalAmount: allInvoices?.reduce((sum, inv) => sum + inv?.amount, 0),
+      paidInvoices: allInvoices?.filter(inv => inv?.status === 'Payée')?.length,
+      pendingInvoices: allInvoices?.filter(inv => inv?.status === 'Envoyée')?.length,
+      overdueInvoices: allInvoices?.filter(inv => inv?.status === 'En retard')?.length,
+      draftInvoices: allInvoices?.filter(inv => inv?.status === 'Brouillon')?.length
     };
-  }, []);
+  }, [allInvoices]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -283,11 +266,8 @@ const InvoiceManagement = () => {
 
   const handleDownloadPDF = (invoice) => {
     try {
-      // Add this block - Define generateInvoicePDF function inline or use a placeholder
       const generateInvoicePDF = (invoiceData) => {
-        // Placeholder PDF generation logic
         console.log('Generating PDF for invoice:', invoiceData.invoiceNumber);
-        // In a real implementation, this would use a library like jsPDF or pdfmake
       };
       
       generateInvoicePDF(invoice);
@@ -299,7 +279,6 @@ const InvoiceManagement = () => {
 
   const handleSendEmail = async (invoice) => {
     try {
-      // ... existing send email logic ...
       trackFeature?.invoice?.send();
     } catch (error) {
       console.error('Error sending email:', error);
@@ -311,9 +290,47 @@ const InvoiceManagement = () => {
     trackFeature?.invoice?.preview();
   };
 
-  const handleCreateInvoice = () => {
-    // ... existing create invoice logic ...
-    trackFeature?.invoice?.create();
+  const handleCreateInvoice = async () => {
+    // Demander les informations de base via des prompts simples
+    const clientName = prompt('Nom du client :');
+    if (!clientName) return;
+    
+    const clientEmail = prompt('Email du client :');
+    if (!clientEmail) return;
+    
+    const amount = prompt('Montant HT (€) :');
+    if (!amount) return;
+
+    try {
+      // Générer un numéro de facture automatique
+      const invoiceNumber = `FAC-${new Date().getFullYear()}-${String(realInvoices.length + 1).padStart(3, '0')}`;
+      
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert([{
+          user_id: user?.id,
+          invoice_number: invoiceNumber,
+          client_name: clientName,
+          client_email: clientEmail,
+          issue_date: new Date().toISOString().split('T')[0],
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +30 jours
+          total_amount: parseFloat(amount),
+          tax_rate: 20,
+          status: 'Brouillon',
+          items: [],
+          notes: ''
+        }])
+        .select();
+
+      if (error) throw error;
+      
+      alert('Facture créée avec succès !');
+      await loadInvoices(); // Recharger la liste
+      trackFeature?.invoice?.create();
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      alert('Erreur lors de la création de la facture: ' + error.message);
+    }
   };
 
   const handleBulkSend = () => {
@@ -367,7 +384,7 @@ const InvoiceManagement = () => {
             </Button>
             <Button
               variant="default"
-              onClick={() => alert('Création d\'une nouvelle facture\n\nFormulaire de création avec modèles personnalisables et calcul automatique de la TVA.')}
+              onClick={handleCreateInvoice}
               iconName="Plus"
               iconPosition="left"
             >
@@ -426,7 +443,13 @@ const InvoiceManagement = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredInvoices?.length === 0 ? (
+                    {loading ? (
+                      <tr>
+                        <td colSpan="8" className="px-4 py-12 text-center">
+                          <p className="text-muted-foreground">Chargement...</p>
+                        </td>
+                      </tr>
+                    ) : filteredInvoices?.length === 0 ? (
                       <tr>
                         <td colSpan="8" className="px-4 py-12 text-center">
                           <Icon name="FileText" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
@@ -456,7 +479,11 @@ const InvoiceManagement = () => {
               </div>
 
               <div className="lg:hidden space-y-4 p-4">
-                {filteredInvoices?.length === 0 ? (
+                {loading ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">Chargement...</p>
+                  </div>
+                ) : filteredInvoices?.length === 0 ? (
                   <div className="text-center py-12">
                     <Icon name="FileText" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
                     <p className="text-muted-foreground">Aucune facture trouvée</p>
