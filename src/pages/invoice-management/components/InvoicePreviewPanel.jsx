@@ -11,7 +11,7 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
     return (
       <div className="bg-card border border-border rounded-lg p-6 md:p-8 shadow-elevation-2 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Icon name="fileText" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
+          <Icon name="FileText" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
           <p className="text-muted-foreground">Sélectionnez une facture pour voir les détails</p>
         </div>
       </div>
@@ -38,7 +38,7 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
     <div className="bg-card border border-border rounded-lg shadow-elevation-2 overflow-hidden">
       <div className="bg-primary/5 border-b border-border px-4 md:px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Icon name="fileText" size={24} color="var(--color-primary)" />
+          <Icon name="FileText" size={24} color="var(--color-primary)" />
           <div>
             <h3 className="font-heading font-semibold text-base md:text-lg text-foreground">
               {invoice?.invoiceNumber}
@@ -47,14 +47,14 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
-          <Icon name="x" size={20} color="var(--color-foreground)" />
+          <Icon name="X" size={20} color="var(--color-foreground)" />
         </Button>
       </div>
       <div className="p-4 md:p-6 space-y-6 max-h-[calc(100vh-300px)] overflow-y-auto">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Icon name="building2" size={20} color="var(--color-primary)" />
+              <Icon name="Building2" size={20} color="var(--color-primary)" />
               <span className="font-semibold text-foreground">Votre Entreprise SARL</span>
             </div>
             <p className="text-sm text-muted-foreground">123 Rue de Commerce</p>
@@ -67,7 +67,7 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
 
         <div className="border-t border-border pt-4">
           <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-            <Icon name="user" size={18} color="var(--color-foreground)" />
+            <Icon name="User" size={18} color="var(--color-foreground)" />
             Facturé à
           </h4>
           <p className="font-medium text-foreground">{invoice?.clientName}</p>
@@ -121,7 +121,7 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
         {invoice?.paymentHistory && invoice?.paymentHistory?.length > 0 && (
           <div className="border-t border-border pt-4">
             <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Icon name="creditCard" size={18} color="var(--color-success)" />
+              <Icon name="CreditCard" size={18} color="var(--color-success)" />
               Historique des paiements
             </h4>
             <div className="space-y-2">
@@ -141,7 +141,7 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
         {invoice?.notes && (
           <div className="border-t border-border pt-4">
             <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-              <Icon name="fileText" size={18} color="var(--color-foreground)" />
+              <Icon name="FileText" size={18} color="var(--color-foreground)" />
               Notes
             </h4>
             <p className="text-sm text-muted-foreground">{invoice?.notes}</p>
@@ -171,7 +171,7 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
               alert('Une erreur est survenue lors de la génération du PDF.');
             }
           }}
-          iconName="download"
+          iconName="Download"
           iconPosition="left"
           className="w-full"
         >
@@ -182,7 +182,7 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
             variant="default"
             fullWidth
             onClick={() => onSendEmail(invoice)}
-            iconName="mail"
+            iconName="Mail"
             iconPosition="left"
           >
             Envoyer par email
