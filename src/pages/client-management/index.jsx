@@ -9,9 +9,12 @@ import AddClientModal from './components/AddClientModal';
 import SearchBar from './components/SearchBar';
 import Icon from '../../components/AppIcon';
 import { trackFeature } from '../../utils/analytics';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 const ClientManagement = () => {
+  const { user } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -249,10 +252,30 @@ const ClientManagement = () => {
 
   const handleAddClient = async (clientData) => {
     try {
-      // ... existing add client logic ...
+      const { data, error } = await supabase
+        .from('clients')
+        .insert([{
+          user_id: user?.id,
+          name: clientData.companyName,
+          email: clientData.email,
+          phone: clientData.phone,
+          siret: clientData.siret,
+          address: clientData.billingAddress,
+          city: '',
+          postal_code: '',
+          country: 'France',
+          is_active: true
+        }])
+        .select();
+
+      if (error) throw error;
+      
+      alert('Client créé avec succès !');
+      setIsAddModalOpen(false);
       trackFeature?.client?.add();
     } catch (error) {
       console.error('Error adding client:', error);
+      alert('Erreur lors de la création du client: ' + error.message);
     }
   };
 
