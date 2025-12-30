@@ -9,7 +9,7 @@ const BillingSettings = () => {
     {
       id: 'starter',
       name: 'Starter',
-      price: '29',
+      price: '0',
       period: 'mois',
       features: [
         'Jusqu\'à 50 factures/mois',
@@ -23,7 +23,7 @@ const BillingSettings = () => {
     {
       id: 'professional',
       name: 'Professionnel',
-      price: '79',
+      price: '49,99',
       period: 'mois',
       features: [
         'Factures illimitées',
@@ -39,7 +39,7 @@ const BillingSettings = () => {
     {
       id: 'enterprise',
       name: 'Entreprise',
-      price: '199',
+      price: '99,99',
       period: 'mois',
       features: [
         'Tout du plan Professionnel',
