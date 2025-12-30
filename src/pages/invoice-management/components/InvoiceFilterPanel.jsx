@@ -3,6 +3,7 @@ import Select from '../../../components/ui/Select';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 
+
 const InvoiceFilterPanel = ({ filters, onFilterChange, onReset }) => {
   const statusOptions = [
     { value: 'all', label: 'Tous les statuts' },
@@ -28,18 +29,16 @@ const InvoiceFilterPanel = ({ filters, onFilterChange, onReset }) => {
         <h3 className="font-heading font-semibold text-base md:text-lg text-foreground">
           Filtres de recherche
         </h3>
-
         <Button
           variant="ghost"
           size="sm"
           onClick={onReset}
-          iconName="rotateCcw"   // ✅ corrigé
+          iconName="RotateCcw"
           iconPosition="left"
         >
           Réinitialiser
         </Button>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Input
           type="text"
