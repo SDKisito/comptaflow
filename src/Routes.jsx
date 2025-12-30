@@ -30,7 +30,7 @@ const AnalyticsWrapper = ({ children }) => {
 
 function AppRoutes() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/comptaflow">
       <ErrorBoundary>
         <ScrollToTop />
         <RouterRoutes>
