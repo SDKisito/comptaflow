@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import NavigationSidebar from '../../components/ui/NavigationSidebar';
 import BreadcrumbTrail from '../../components/ui/BreadcrumbTrail';
 import Button from '../../components/ui/Button';
@@ -21,10 +21,65 @@ const ClientManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [realClients, setRealClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les clients depuis Supabase
+  useEffect(() => {
+    if (user?.id) {
+      loadClients();
+    }
+  }, [user]);
+
+  const loadClients = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Transformez les données pour correspondre au format attendu
+      const transformedClients = (data || []).map(client => ({
+        id: client.id,
+        companyName: client.name || client.company_name || 'Sans nom',
+        contactName: client.first_name && client.last_name 
+          ? `${client.first_name} ${client.last_name}` 
+          : client.name || '',
+        email: client.email || '',
+        phone: client.phone || '',
+        siret: client.siret || '',
+        vatNumber: client.vat_number || '',
+        billingAddress: client.address || '',
+        status: client.is_active ? 'active' : 'inactive',
+        outstandingBalance: 0,
+        lastActivity: new Date(client.created_at).toLocaleDateString('fr-FR'),
+        paymentTerms: '30 jours',
+        creditLimit: 0,
+        totalInvoices: 0,
+        paidInvoices: 0,
+        pendingInvoices: 0,
+        overdueInvoices: 0,
+        recentInvoices: [],
+        paymentHistory: [],
+        documents: [],
+        notes: []
+      }));
+      
+      setRealClients(transformedClients);
+    } catch (error) {
+      console.error('Erreur lors du chargement des clients:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const mockClients = [
     {
-      id: 1,
+      id: 'mock-1',
       companyName: "SARL Boulangerie Moderne",
       contactName: "Pierre Dubois",
       email: "p.dubois@boulangerie-moderne.fr",
@@ -60,7 +115,7 @@ const ClientManagement = () => {
       ]
     },
     {
-      id: 2,
+      id: 'mock-2',
       companyName: "Restaurant Le Gourmet",
       contactName: "Sophie Martin",
       email: "contact@legourmet-restaurant.fr",
@@ -93,7 +148,7 @@ const ClientManagement = () => {
       ]
     },
     {
-      id: 3,
+      id: 'mock-3',
       companyName: "Café des Arts",
       contactName: "Luc Bernard",
       email: "l.bernard@cafedesarts.fr",
@@ -127,7 +182,7 @@ const ClientManagement = () => {
       ]
     },
     {
-      id: 4,
+      id: 'mock-4',
       companyName: "Hôtel Belle Vue",
       contactName: "Claire Rousseau",
       email: "direction@hotel-bellevue.fr",
@@ -160,7 +215,7 @@ const ClientManagement = () => {
       ]
     },
     {
-      id: 5,
+      id: 'mock-5',
       companyName: "Traiteur Saveurs",
       contactName: "Marc Lefebvre",
       email: "m.lefebvre@traiteur-saveurs.fr",
@@ -192,7 +247,7 @@ const ClientManagement = () => {
       ]
     },
     {
-      id: 6,
+      id: 'mock-6',
       companyName: "Épicerie Fine Deluxe",
       contactName: "Isabelle Moreau",
       email: "contact@epicerie-deluxe.fr",
@@ -225,7 +280,10 @@ const ClientManagement = () => {
     }
   ];
 
-  const filteredClients = mockClients?.filter(client => {
+  // Combiner les clients mockés et réels
+  const allClients = [...mockClients, ...realClients];
+
+  const filteredClients = allClients?.filter(client => {
     const matchesFilter = activeFilter === 'all' || client?.status === activeFilter;
     const matchesSearch = 
       client?.companyName?.toLowerCase()?.includes(searchQuery?.toLowerCase()) ||
@@ -271,6 +329,7 @@ const ClientManagement = () => {
       if (error) throw error;
       
       alert('Client créé avec succès !');
+      await loadClients(); // Recharger la liste des clients
       setIsAddModalOpen(false);
       trackFeature?.client?.add();
     } catch (error) {
@@ -288,6 +347,11 @@ const ClientManagement = () => {
     // ... existing edit logic ...
     trackFeature?.client?.edit();
   };
+
+  // Calcul des statistiques avec les vrais clients
+  const totalClients = allClients.length;
+  const activeClients = allClients.filter(c => c.status === 'active').length;
+  const totalOutstanding = allClients.reduce((sum, c) => sum + (c.outstandingBalance || 0), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -326,8 +390,8 @@ const ClientManagement = () => {
                   <p className="text-sm text-muted-foreground">Total clients</p>
                   <Icon name="Users" size={20} color="var(--color-primary)" />
                 </div>
-                <p className="text-2xl md:text-3xl font-bold text-foreground">48</p>
-                <p className="text-xs text-success mt-1">+6 ce mois</p>
+                <p className="text-2xl md:text-3xl font-bold text-foreground">{totalClients}</p>
+                <p className="text-xs text-success mt-1">{realClients.length} réels</p>
               </div>
 
               <div className="bg-card border border-border rounded-lg p-4 md:p-5">
@@ -335,8 +399,8 @@ const ClientManagement = () => {
                   <p className="text-sm text-muted-foreground">Clients actifs</p>
                   <Icon name="CheckCircle" size={20} color="var(--color-success)" />
                 </div>
-                <p className="text-2xl md:text-3xl font-bold text-foreground">42</p>
-                <p className="text-xs text-muted-foreground mt-1">87.5% du total</p>
+                <p className="text-2xl md:text-3xl font-bold text-foreground">{activeClients}</p>
+                <p className="text-xs text-muted-foreground mt-1">{totalClients > 0 ? Math.round((activeClients / totalClients) * 100) : 0}% du total</p>
               </div>
 
               <div className="bg-card border border-border rounded-lg p-4 md:p-5">
@@ -344,8 +408,8 @@ const ClientManagement = () => {
                   <p className="text-sm text-muted-foreground">Solde total impayé</p>
                   <Icon name="AlertCircle" size={20} color="var(--color-warning)" />
                 </div>
-                <p className="text-2xl md:text-3xl font-bold text-foreground">10 150 €</p>
-                <p className="text-xs text-error mt-1">8 factures en retard</p>
+                <p className="text-2xl md:text-3xl font-bold text-foreground">{totalOutstanding.toLocaleString('fr-FR')} €</p>
+                <p className="text-xs text-error mt-1">Basé sur données mockées</p>
               </div>
 
               <div className="bg-card border border-border rounded-lg p-4 md:p-5">
@@ -370,33 +434,41 @@ const ClientManagement = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
-            {sortedClients?.map((client) => (
-              <ClientCard
-                key={client?.id}
-                client={client}
-                onSelect={setSelectedClient}
-                isSelected={selectedClient?.id === client?.id}
-              />
-            ))}
-          </div>
-
-          {sortedClients?.length === 0 && (
-            <div className="text-center py-12 md:py-16">
-              <Icon name="Users" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
-              <h3 className="font-heading font-semibold text-lg md:text-xl text-foreground mb-2">
-                Aucun client trouvé
-              </h3>
-              <p className="text-sm md:text-base text-muted-foreground mb-6">
-                Essayez de modifier vos critères de recherche ou de filtrage
-              </p>
-              <Button variant="outline" iconName="RefreshCw" iconPosition="left" onClick={() => {
-                setSearchQuery('');
-                setActiveFilter('all');
-              }}>
-                Réinitialiser les filtres
-              </Button>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Chargement des clients...</p>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
+                {sortedClients?.map((client) => (
+                  <ClientCard
+                    key={client?.id}
+                    client={client}
+                    onSelect={setSelectedClient}
+                    isSelected={selectedClient?.id === client?.id}
+                  />
+                ))}
+              </div>
+
+              {sortedClients?.length === 0 && (
+                <div className="text-center py-12 md:py-16">
+                  <Icon name="Users" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
+                  <h3 className="font-heading font-semibold text-lg md:text-xl text-foreground mb-2">
+                    Aucun client trouvé
+                  </h3>
+                  <p className="text-sm md:text-base text-muted-foreground mb-6">
+                    Essayez de modifier vos critères de recherche ou de filtrage
+                  </p>
+                  <Button variant="outline" iconName="RefreshCw" iconPosition="left" onClick={() => {
+                    setSearchQuery('');
+                    setActiveFilter('all');
+                  }}>
+                    Réinitialiser les filtres
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
