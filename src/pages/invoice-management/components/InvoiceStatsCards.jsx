@@ -10,42 +10,42 @@ const InvoiceStatsCards = ({ stats }) => {
     {
       title: 'Total des factures',
       value: stats?.totalInvoices,
-      icon: 'FileText',
+      icon: 'fileText',
       color: 'text-primary',
       bgColor: 'bg-primary/10'
     },
     {
       title: 'Montant total',
       value: formatAmount(stats?.totalAmount),
-      icon: 'Euro',
+      icon: 'euro',
       color: 'text-success',
       bgColor: 'bg-success/10'
     },
     {
       title: 'Factures payées',
       value: stats?.paidInvoices,
-      icon: 'CheckCircle',
+      icon: 'checkCircle',
       color: 'text-success',
       bgColor: 'bg-success/10'
     },
     {
       title: 'En attente',
       value: stats?.pendingInvoices,
-      icon: 'Clock',
+      icon: 'clock',
       color: 'text-warning',
       bgColor: 'bg-warning/10'
     },
     {
       title: 'En retard',
       value: stats?.overdueInvoices,
-      icon: 'AlertCircle',
+      icon: 'alertCircle',
       color: 'text-error',
       bgColor: 'bg-error/10'
     },
     {
       title: 'Brouillons',
       value: stats?.draftInvoices,
-      icon: 'FileEdit',
+      icon: 'fileEdit',
       color: 'text-muted-foreground',
       bgColor: 'bg-muted'
     }
