@@ -1,0 +1,86 @@
+name: Deploy ComptaFlow to Production
+
+on:
+  push:
+    branches:
+      - main  # Se déclenche à chaque push sur main
+  workflow_dispatch:  # Permet de lancer manuellement
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Récupère le code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Configure Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Installe les dépendances
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Crée le fichier .env.production
+      - name: Create .env.production file
+        run: |
+          cat > .env.production << EOF
+          VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_STRIPE_PUBLIC_KEY=${{ secrets.VITE_STRIPE_PUBLIC_KEY }}
+          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          VITE_STRIPE_PRICE_FREE=${{ secrets.VITE_STRIPE_PRICE_FREE }}
+          VITE_STRIPE_PRICE_PRO=${{ secrets.VITE_STRIPE_PRICE_PRO }}
+          VITE_STRIPE_PRICE_ENTERPRISE=${{ secrets.VITE_STRIPE_PRICE_ENTERPRISE }}
+          VITE_ADSENSE_ID=${{ secrets.VITE_ADSENSE_ID }}
+          EOF
+
+      # 5. Build l'application
+      - name: Build application
+        run: npm run build
+
+      # 6. Crée le fichier .htaccess
+      - name: Create .htaccess
+        run: |
+          cat > build/.htaccess << 'EOF'
+          <IfModule mod_rewrite.c>
+            RewriteEngine On
+            RewriteBase /comptaflow/
+            RewriteRule ^index\.html$ - [L]
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule . /comptaflow/index.html [L]
+          </IfModule>
+
+          <IfModule mod_deflate.c>
+            AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript application/json
+          </IfModule>
+
+          <IfModule mod_expires.c>
+            ExpiresActive On
+            ExpiresByType image/jpg "access plus 1 year"
+            ExpiresByType image/jpeg "access plus 1 year"
+            ExpiresByType image/gif "access plus 1 year"
+            ExpiresByType image/png "access plus 1 year"
+            ExpiresByType image/svg+xml "access plus 1 year"
+            ExpiresByType text/css "access plus 1 month"
+            ExpiresByType application/javascript "access plus 1 month"
+          </IfModule>
+          EOF
+
+      # 7. Déploie via FTP
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./build/
+          server-dir: /domains/nando-it.fr/public_html/comptaflow/
+          dangerous-clean-slate: true  # Supprime les anciens fichiers avant d'uploader
