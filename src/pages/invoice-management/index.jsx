@@ -288,37 +288,54 @@ const InvoiceManagement = () => {
     }
   };
 
-  const handleSendInvoice = async (invoice) => {
-    // Si c'est une facture mockée
-    if (typeof invoice.id === 'string' && invoice.id.startsWith('mock-')) {
-      alert(`📧 Envoi simulé de la facture ${invoice.invoiceNumber}\n\nÀ: ${invoice.clientEmail}\n\n⚠️ Cette fonctionnalité nécessite un backend (Supabase Edge Function) pour envoyer de vrais emails.`);
-      return;
-    }
+const handleSendInvoice = async (invoice) => {
+  if (typeof invoice.id === 'string' && invoice.id.startsWith('mock-')) {
+    alert(`📧 Envoi simulé (données de démonstration)`);
+    return;
+  }
 
-    if (!confirm(`Envoyer la facture ${invoice.invoiceNumber} à ${invoice.clientEmail} ?`)) {
-      return;
-    }
+  if (!confirm(`Envoyer la facture ${invoice.invoiceNumber} à ${invoice.clientEmail} ?`)) {
+    return;
+  }
 
-    try {
-      // Mettre à jour le statut en "sent"
-      const { error } = await supabase
-        .from('invoices')
-        .update({
-          status: 'sent',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', invoice.id)
-        .eq('user_id', user?.id);
+  try {
+    // Appeler la Edge Function
+    const { data: functionData, error: functionError } = await supabase.functions.invoke('send-email', {
+      body: {
+        emailType: 'invoice',
+        to: invoice.clientEmail,
+        data: {
+          clientName: invoice.clientName,
+          invoiceNumber: invoice.invoiceNumber,
+          issueDate: invoice.issueDate,
+          dueDate: invoice.dueDate,
+          totalAmount: (invoice.amount * 1.2).toFixed(2), // TTC
+          downloadUrl: `https://nando-it.fr/comptaflow/invoice/${invoice.id}/download`
+        }
+      }
+    });
 
-      if (error) throw error;
-      
-      alert(`✅ Facture marquée comme envoyée !\n\n📧 Pour envoyer de vrais emails, configurez une Supabase Edge Function.\n\nVoir la documentation : https://supabase.com/docs/guides/functions`);
-      await loadInvoices();
-    } catch (error) {
-      console.error('Error sending invoice:', error);
-      alert('Erreur: ' + error.message);
-    }
-  };
+    if (functionError) throw functionError;
+
+    // Mettre à jour le statut
+    const { error } = await supabase
+      .from('invoices')
+      .update({
+        status: 'sent',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', invoice.id)
+      .eq('user_id', user?.id);
+
+    if (error) throw error;
+    
+    alert(`✅ Facture envoyée à ${invoice.clientEmail} !`);
+    await loadInvoices();
+  } catch (error) {
+    console.error('Error sending invoice:', error);
+    alert('Erreur lors de l\'envoi: ' + error.message);
+  }
+};
 
   const handleMarkPaid = async (invoice) => {
     // Si c'est une facture mockée
