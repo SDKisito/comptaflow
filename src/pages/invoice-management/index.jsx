@@ -54,7 +54,6 @@ const InvoiceManagement = () => {
       
       if (error) throw error;
       
-      // Transformez les données pour correspondre au format attendu
       const transformedInvoices = (data || []).map(invoice => ({
         id: invoice.id,
         invoiceNumber: invoice.invoice_number || 'N/A',
@@ -119,7 +118,6 @@ const InvoiceManagement = () => {
     }
   ];
 
-  // Combiner les factures mockées et réelles
   const allInvoices = [...mockInvoices, ...realInvoices];
 
   const filteredInvoices = useMemo(() => {
@@ -213,13 +211,11 @@ const InvoiceManagement = () => {
   };
 
   const handleEditInvoice = async (invoice) => {
-    // Si c'est une facture mockée, on ne peut pas la modifier
     if (typeof invoice.id === 'string' && invoice.id.startsWith('mock-')) {
       alert('Cette facture est en lecture seule (données de démonstration)');
       return;
     }
 
-    // Demander les nouvelles informations
     const newClientName = prompt('Nom du client :', invoice.clientName);
     if (!newClientName) return;
     
@@ -245,7 +241,7 @@ const InvoiceManagement = () => {
       if (error) throw error;
       
       alert('Facture modifiée avec succès !');
-      await loadInvoices(); // Recharger la liste
+      await loadInvoices();
     } catch (error) {
       console.error('Error updating invoice:', error);
       alert('Erreur lors de la modification: ' + error.message);
@@ -253,11 +249,7 @@ const InvoiceManagement = () => {
   };
 
   const handleDuplicateInvoice = async (invoice) => {
-    // Si c'est une facture mockée, on crée quand même une vraie copie
-    const isMocked = typeof invoice.id === 'string' && invoice.id.startsWith('mock-');
-
     try {
-      // Générer un nouveau numéro de facture
       const newInvoiceNumber = `FAC-${new Date().getFullYear()}-${String(realInvoices.length + 1).padStart(3, '0')}`;
       
       const { data, error } = await supabase
@@ -281,64 +273,74 @@ const InvoiceManagement = () => {
       if (error) throw error;
       
       alert(`Facture dupliquée avec succès !\nNouveau numéro: ${newInvoiceNumber}`);
-      await loadInvoices(); // Recharger la liste
+      await loadInvoices();
     } catch (error) {
       console.error('Error duplicating invoice:', error);
       alert('Erreur lors de la duplication: ' + error.message);
     }
   };
 
-const handleSendInvoice = async (invoice) => {
-  if (typeof invoice.id === 'string' && invoice.id.startsWith('mock-')) {
-    alert(`📧 Envoi simulé (données de démonstration)`);
-    return;
-  }
+  const handleSendInvoice = async (invoice) => {
+    if (typeof invoice.id === 'string' && invoice.id.startsWith('mock-')) {
+      alert(`📧 Envoi simulé (données de démonstration)`);
+      return;
+    }
 
-  if (!confirm(`Envoyer la facture ${invoice.invoiceNumber} à ${invoice.clientEmail} ?`)) {
-    return;
-  }
+    if (!confirm(`Envoyer la facture ${invoice.invoiceNumber} à ${invoice.clientEmail} ?`)) {
+      return;
+    }
 
-  try {
-    // Appeler la Edge Function
-    const { data: functionData, error: functionError } = await supabase.functions.invoke('send-email', {
-      body: {
-        emailType: 'invoice',
-        to: invoice.clientEmail,
-        data: {
-          clientName: invoice.clientName,
-          invoiceNumber: invoice.invoiceNumber,
-          issueDate: invoice.issueDate,
-          dueDate: invoice.dueDate,
-          totalAmount: (invoice.amount * 1.2).toFixed(2), // TTC
-          downloadUrl: `https://nando-it.fr/comptaflow/invoice/${invoice.id}/download`
+    try {
+      // Récupérer le profil du comptable
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('first_name, last_name, company_name')
+        .eq('id', user.id)
+        .single();
+
+      const accountantName = profileData 
+        ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || 'Votre Comptable'
+        : 'Votre Comptable';
+
+      // Appeler la Edge Function
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('send-email', {
+        body: {
+          emailType: 'invoice',
+          to: invoice.clientEmail,
+          fromName: `${accountantName} - ComptaFlow`,
+          data: {
+            clientName: invoice.clientName,
+            invoiceNumber: invoice.invoiceNumber,
+            issueDate: invoice.issueDate,
+            dueDate: invoice.dueDate,
+            totalAmount: (invoice.amount * 1.2).toFixed(2),
+          }
         }
-      }
-    });
+      });
 
-    if (functionError) throw functionError;
+      if (functionError) throw functionError;
 
-    // Mettre à jour le statut
-    const { error } = await supabase
-      .from('invoices')
-      .update({
-        status: 'sent',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', invoice.id)
-      .eq('user_id', user?.id);
+      // Mettre à jour le statut
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          status: 'sent',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invoice.id)
+        .eq('user_id', user?.id);
 
-    if (error) throw error;
-    
-    alert(`✅ Facture envoyée à ${invoice.clientEmail} !`);
-    await loadInvoices();
-  } catch (error) {
-    console.error('Error sending invoice:', error);
-    alert('Erreur lors de l\'envoi: ' + error.message);
-  }
-};
+      if (error) throw error;
+      
+      alert(`✅ Facture envoyée à ${invoice.clientEmail} !`);
+      await loadInvoices();
+    } catch (error) {
+      console.error('Error sending invoice:', error);
+      alert('Erreur lors de l\'envoi: ' + error.message);
+    }
+  };
 
   const handleMarkPaid = async (invoice) => {
-    // Si c'est une facture mockée
     if (typeof invoice.id === 'string' && invoice.id.startsWith('mock-')) {
       alert('Cette facture est en lecture seule (données de démonstration)');
       return;
@@ -388,7 +390,6 @@ const handleSendInvoice = async (invoice) => {
   };
 
   const handleCreateInvoice = async () => {
-    // Demander les informations de base
     const clientName = prompt('Nom du client :');
     if (!clientName) return;
     
@@ -399,7 +400,6 @@ const handleSendInvoice = async (invoice) => {
     if (!amount) return;
 
     try {
-      // Générer un numéro de facture automatique
       const invoiceNumber = `FAC-${new Date().getFullYear()}-${String(realInvoices.length + 1).padStart(3, '0')}`;
       
       const { data, error } = await supabase
@@ -444,7 +444,6 @@ const handleSendInvoice = async (invoice) => {
     }
 
     try {
-      // Filtrer uniquement les IDs non-mockés
       const realIds = selectedInvoices.filter(id => !(typeof id === 'string' && id.startsWith('mock-')));
       
       if (realIds.length === 0) {
