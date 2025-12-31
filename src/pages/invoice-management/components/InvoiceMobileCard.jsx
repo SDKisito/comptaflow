@@ -22,15 +22,15 @@ const InvoiceMobileCard = ({ invoice, isSelected, onSelect, onView, onEdit, onDu
     e?.stopPropagation();
     try {
       const companyInfo = {
-        name: 'ComptaFlow SARL',
-        address: '123 Avenue de la Comptabilité',
-        postalCode: '75001',
-        city: 'Paris',
-        country: 'France',
-        phone: '+33 1 23 45 67 89',
-        email: 'contact@comptaflow.fr',
-        siret: '123 456 789 00012',
-        tvaNumber: 'FR12345678901'
+        name: invoice?.companyName || '',
+        address: invoice?.companyAddress || '',
+        postalCode: invoice?.companyPostalCode || '',
+        city: invoice?.companyCity || '',
+        country: invoice?.companyCountry || '',
+        phone: invoice?.companyPhone || '',
+        email: invoice?.companyEmail || '',
+        siret: invoice?.companySiret || '',
+        tvaNumber: invoice?.companyTvaNumber || ''
       };
 
       downloadInvoicePDF(invoice, companyInfo);
