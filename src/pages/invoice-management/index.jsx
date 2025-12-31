@@ -575,6 +575,7 @@ const InvoiceManagement = () => {
                           onDuplicate={handleDuplicateInvoice}
                           onSend={handleSendInvoice}
                           onMarkPaid={handleMarkPaid}
+                          onDownloadPDF={handleDownloadPDF}
                         />
                       ))
                     )}
