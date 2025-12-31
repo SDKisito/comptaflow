@@ -3,13 +3,13 @@ name: Deploy ComptaFlow to Production
 on:
   push:
     branches:
-      - main  # Se déclenche à chaque push sur main
-  workflow_dispatch:  # Permet de lancer manuellement
+      - main
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       # 1. Récupère le code
       - name: Checkout code
@@ -45,7 +45,15 @@ jobs:
       - name: Build application
         run: npm run build
 
-      # 6. Crée le fichier .htaccess
+      # 6. Déploiement de la fonction Supabase Edge (send-email)
+      - name: Deploy Supabase Edge Function
+        run: |
+          npm install -g supabase
+          supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase functions deploy send-email --no-verify-jwt
+
+      # 7. Crée le fichier .htaccess
       - name: Create .htaccess
         run: |
           cat > build/.htaccess << 'EOF'
@@ -74,7 +82,7 @@ jobs:
           </IfModule>
           EOF
 
-      # 7. Déploie via FTP
+      # 8. Déploie via FTP
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
@@ -83,4 +91,4 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./build/
           server-dir: /domains/nando-it.fr/public_html/comptaflow/
-          dangerous-clean-slate: true  # Supprime les anciens fichiers avant d'uploader
+          dangerous-clean-slate: true
