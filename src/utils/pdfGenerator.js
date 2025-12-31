@@ -18,18 +18,17 @@ export const generateInvoicePDF = (invoice, companyInfo = {}) => {
   });
 
   // Default company information
-  const defaultCompanyInfo = {
-    name: 'ComptaFlow SARL',
-    address: '123 Avenue de la Comptabilité',
-    postalCode: '75001',
-    city: 'Paris',
-    country: 'France',
-    phone: '+33 1 23 45 67 89',
-    email: 'contact@comptaflow.fr',
-    siret: '123 456 789 00012',
-    tvaNumber: 'FR12345678901',
-    ...companyInfo
-  };
+const defaultCompanyInfo = {
+  name: companyInfo?.name || '',
+  address: companyInfo?.address || '',
+  postalCode: companyInfo?.postalCode || '',
+  city: companyInfo?.city || '',
+  country: companyInfo?.country || '',
+  phone: companyInfo?.phone || '',
+  email: companyInfo?.email || '',
+  siret: companyInfo?.siret || '',
+  tvaNumber: companyInfo?.tvaNumber || ''
+};
 
   // Calculate totals
   const calculateTotals = () => {
