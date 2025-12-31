@@ -30,7 +30,7 @@ const InvoiceMobileCard = ({ invoice, isSelected, onSelect, onView, onEdit, onDu
         phone: invoice?.companyPhone || '',
         email: invoice?.companyEmail || '',
         siret: invoice?.companySiret || '',
-        tvaNumber: invoice?.companyTvaNumber || ''
+        tvaNumber: invoice?.companyTvaNumber || '',
       };
 
       downloadInvoicePDF(invoice, companyInfo);
