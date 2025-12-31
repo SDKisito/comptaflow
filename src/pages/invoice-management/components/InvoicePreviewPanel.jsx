@@ -154,7 +154,7 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
           onClick={() => {
             try {
               const companyInfo = {
-                name: name: invoice?.companyName || '',
+                name: invoice?.companyName || '',
                 address: invoice?.companyAddress || '',
                 postalCode: invoice?.companyPostalCode || '',
                 city: invoice?.companyCity || '',
