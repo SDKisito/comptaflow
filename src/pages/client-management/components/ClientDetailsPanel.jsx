@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import { useNavigate } from 'react-router-dom';
 
 const ClientDetailsPanel = ({ client, onClose, onEdit }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [newNote, setNewNote] = useState('');
 
   if (!client) return null;
 
@@ -14,6 +18,40 @@ const ClientDetailsPanel = ({ client, onClose, onEdit }) => {
     { id: 'documents', label: 'Documents', icon: 'FolderOpen' },
     { id: 'notes', label: 'Notes', icon: 'MessageSquare' }
   ];
+
+  const handleCreateInvoice = () => {
+    // Rediriger vers la page de création de facture avec les données du client pré-remplies
+    navigate('/comptaflow/invoice-management', { 
+      state: { 
+        prefilledClient: {
+          clientName: client.companyName,
+          clientEmail: client.email,
+          clientAddress: client.billingAddress
+        }
+      }
+    });
+  };
+
+  const handleAddNote = () => {
+    if (!newNote.trim()) return;
+    
+    // TODO: Sauvegarder la note dans la base de données
+    console.log('Nouvelle note:', newNote);
+    alert('Note ajoutée avec succès !');
+    setNewNote('');
+    setIsEditingNotes(false);
+  };
+
+  const handleDownloadDocument = (doc) => {
+    // TODO: Implémenter le téléchargement réel
+    console.log('Télécharger document:', doc);
+    alert(`Téléchargement de ${doc.name}...`);
+  };
+
+  const handleUploadDocument = () => {
+    // TODO: Implémenter l'upload de document
+    alert('Upload de document - À implémenter');
+  };
 
   const renderOverview = () => (
     <div className="space-y-4 md:space-y-6">
@@ -38,11 +76,11 @@ const ClientDetailsPanel = ({ client, onClose, onEdit }) => {
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">SIRET</p>
-            <p className="text-sm md:text-base font-medium">{client?.siret}</p>
+            <p className="text-sm md:text-base font-medium">{client?.siret || 'Non renseigné'}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">N° TVA</p>
-            <p className="text-sm md:text-base font-medium">{client?.vatNumber}</p>
+            <p className="text-sm md:text-base font-medium">{client?.vatNumber || 'Non renseigné'}</p>
           </div>
         </div>
       </div>
@@ -72,19 +110,19 @@ const ClientDetailsPanel = ({ client, onClose, onEdit }) => {
         <h4 className="font-heading font-semibold text-base md:text-lg mb-3 md:mb-4">Statistiques</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <div className="text-center">
-            <p className="text-xl md:text-2xl font-bold text-primary">{client?.totalInvoices}</p>
+            <p className="text-xl md:text-2xl font-bold text-primary">{client?.totalInvoices || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">Factures</p>
           </div>
           <div className="text-center">
-            <p className="text-xl md:text-2xl font-bold text-success">{client?.paidInvoices}</p>
+            <p className="text-xl md:text-2xl font-bold text-success">{client?.paidInvoices || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">Payées</p>
           </div>
           <div className="text-center">
-            <p className="text-xl md:text-2xl font-bold text-warning">{client?.pendingInvoices}</p>
+            <p className="text-xl md:text-2xl font-bold text-warning">{client?.pendingInvoices || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">En attente</p>
           </div>
           <div className="text-center">
-            <p className="text-xl md:text-2xl font-bold text-error">{client?.overdueInvoices}</p>
+            <p className="text-xl md:text-2xl font-bold text-error">{client?.overdueInvoices || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">En retard</p>
           </div>
         </div>
@@ -94,97 +132,198 @@ const ClientDetailsPanel = ({ client, onClose, onEdit }) => {
 
   const renderInvoices = () => (
     <div className="space-y-3 md:space-y-4">
-      {client?.recentInvoices?.map((invoice) => (
-        <div key={invoice?.id} className="bg-muted/50 rounded-lg p-4 md:p-5 hover:shadow-elevation-1 transition-smooth">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex-1 min-w-0">
-              <h5 className="font-semibold text-sm md:text-base mb-1">{invoice?.number}</h5>
-              <p className="text-xs md:text-sm text-muted-foreground">{invoice?.date}</p>
+      {client?.recentInvoices?.length > 0 ? (
+        client.recentInvoices.map((invoice) => (
+          <div key={invoice?.id} className="bg-muted/50 rounded-lg p-4 md:p-5 hover:shadow-elevation-1 transition-smooth cursor-pointer">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex-1 min-w-0">
+                <h5 className="font-semibold text-sm md:text-base mb-1">{invoice?.number}</h5>
+                <p className="text-xs md:text-sm text-muted-foreground">{invoice?.date}</p>
+              </div>
+              <span className={`px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
+                invoice?.status === 'paid' ? 'bg-success/10 text-success' :
+                invoice?.status === 'pending'? 'bg-warning/10 text-warning' : 'bg-error/10 text-error'
+              }`}>
+                {invoice?.status === 'paid' ? 'Payée' : invoice?.status === 'pending' ? 'En attente' : 'En retard'}
+              </span>
             </div>
-            <span className={`px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
-              invoice?.status === 'paid' ? 'bg-success/10 text-success' :
-              invoice?.status === 'pending'? 'bg-warning/10 text-warning' : 'bg-error/10 text-error'
-            }`}>
-              {invoice?.status === 'paid' ? 'Payée' : invoice?.status === 'pending' ? 'En attente' : 'En retard'}
-            </span>
+            <div className="flex items-center justify-between">
+              <p className="text-sm md:text-base font-semibold">
+                {invoice?.amount?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+              </p>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                iconName="Eye" 
+                iconPosition="left"
+                onClick={() => navigate(`/comptaflow/invoice-management?invoice=${invoice.id}`)}
+              >
+                Voir
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-sm md:text-base font-semibold">
-              {invoice?.amount?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
-            </p>
-            <Button variant="ghost" size="sm" iconName="Eye" iconPosition="left">
-              Voir
-            </Button>
-          </div>
+        ))
+      ) : (
+        <div className="text-center py-8">
+          <Icon name="FileText" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
+          <p className="text-muted-foreground">Aucune facture pour ce client</p>
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="mt-4"
+            onClick={handleCreateInvoice}
+          >
+            Créer la première facture
+          </Button>
         </div>
-      ))}
+      )}
     </div>
   );
 
   const renderPayments = () => (
     <div className="space-y-3 md:space-y-4">
-      {client?.paymentHistory?.map((payment) => (
-        <div key={payment?.id} className="bg-muted/50 rounded-lg p-4 md:p-5">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm md:text-base mb-1">
-                {payment?.amount?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
-              </p>
-              <p className="text-xs md:text-sm text-muted-foreground">{payment?.date}</p>
+      {client?.paymentHistory?.length > 0 ? (
+        client.paymentHistory.map((payment) => (
+          <div key={payment?.id} className="bg-muted/50 rounded-lg p-4 md:p-5">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm md:text-base mb-1">
+                  {payment?.amount?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                </p>
+                <p className="text-xs md:text-sm text-muted-foreground">{payment?.date}</p>
+              </div>
+              <Icon name="CheckCircle" size={20} color="var(--color-success)" />
             </div>
-            <Icon name="CheckCircle" size={20} color="var(--color-success)" />
+            <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+              <Icon name="CreditCard" size={14} color="var(--color-muted-foreground)" />
+              <span>{payment?.method}</span>
+              <span>•</span>
+              <span>Facture {payment?.invoiceNumber}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-            <Icon name="CreditCard" size={14} color="var(--color-muted-foreground)" />
-            <span>{payment?.method}</span>
-            <span>•</span>
-            <span>Facture {payment?.invoiceNumber}</span>
-          </div>
+        ))
+      ) : (
+        <div className="text-center py-8">
+          <Icon name="CreditCard" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
+          <p className="text-muted-foreground">Aucun paiement enregistré</p>
         </div>
-      ))}
+      )}
     </div>
   );
 
   const renderDocuments = () => (
     <div className="space-y-3 md:space-y-4">
-      {client?.documents?.map((doc) => (
-        <div key={doc?.id} className="bg-muted/50 rounded-lg p-4 md:p-5 hover:shadow-elevation-1 transition-smooth">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Icon name="FileText" size={20} color="var(--color-primary)" />
+      <Button 
+        variant="outline" 
+        size="sm" 
+        iconName="Upload" 
+        iconPosition="left"
+        onClick={handleUploadDocument}
+        className="w-full"
+      >
+        Uploader un document
+      </Button>
+
+      {client?.documents?.length > 0 ? (
+        client.documents.map((doc) => (
+          <div key={doc?.id} className="bg-muted/50 rounded-lg p-4 md:p-5 hover:shadow-elevation-1 transition-smooth">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Icon name="FileText" size={20} color="var(--color-primary)" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h5 className="font-semibold text-sm md:text-base mb-1 truncate">{doc?.name}</h5>
+                <p className="text-xs md:text-sm text-muted-foreground">{doc?.date} • {doc?.size}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                iconName="Download"
+                onClick={() => handleDownloadDocument(doc)}
+              >
+                <span className="hidden md:inline">Télécharger</span>
+              </Button>
             </div>
-            <div className="flex-1 min-w-0">
-              <h5 className="font-semibold text-sm md:text-base mb-1 truncate">{doc?.name}</h5>
-              <p className="text-xs md:text-sm text-muted-foreground">{doc?.date} • {doc?.size}</p>
-            </div>
-            <Button variant="ghost" size="sm" iconName="Download">
-              <span className="hidden md:inline">Télécharger</span>
-            </Button>
           </div>
+        ))
+      ) : (
+        <div className="text-center py-8">
+          <Icon name="FolderOpen" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
+          <p className="text-muted-foreground">Aucun document</p>
         </div>
-      ))}
+      )}
     </div>
   );
 
   const renderNotes = () => (
     <div className="space-y-3 md:space-y-4">
-      {client?.notes?.map((note) => (
-        <div key={note?.id} className="bg-muted/50 rounded-lg p-4 md:p-5">
-          <div className="flex items-start gap-3 mb-3">
-            <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-xs md:text-sm font-semibold text-primary">{note?.author?.charAt(0)}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="font-semibold text-sm md:text-base">{note?.author}</p>
-                <span className="text-xs text-muted-foreground">•</span>
-                <p className="text-xs md:text-sm text-muted-foreground">{note?.date}</p>
-              </div>
-              <p className="text-sm md:text-base text-foreground">{note?.content}</p>
-            </div>
+      {isEditingNotes ? (
+        <div className="bg-muted/50 rounded-lg p-4">
+          <textarea
+            className="w-full min-h-[100px] p-3 rounded-md border border-border bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Ajouter une note..."
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+          />
+          <div className="flex gap-2 mt-3">
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={handleAddNote}
+            >
+              Enregistrer
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                setIsEditingNotes(false);
+                setNewNote('');
+              }}
+            >
+              Annuler
+            </Button>
           </div>
         </div>
-      ))}
+      ) : (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          iconName="Plus" 
+          iconPosition="left"
+          onClick={() => setIsEditingNotes(true)}
+          className="w-full"
+        >
+          Ajouter une note
+        </Button>
+      )}
+
+      {client?.notes?.length > 0 ? (
+        client.notes.map((note) => (
+          <div key={note?.id} className="bg-muted/50 rounded-lg p-4 md:p-5">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-xs md:text-sm font-semibold text-primary">{note?.author?.charAt(0)}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-semibold text-sm md:text-base">{note?.author}</p>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <p className="text-xs md:text-sm text-muted-foreground">{note?.date}</p>
+                </div>
+                <p className="text-sm md:text-base text-foreground">{note?.content}</p>
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        !isEditingNotes && (
+          <div className="text-center py-8">
+            <Icon name="MessageSquare" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
+            <p className="text-muted-foreground">Aucune note</p>
+          </div>
+        )
+      )}
     </div>
   );
 
@@ -240,10 +379,22 @@ const ClientDetailsPanel = ({ client, onClose, onEdit }) => {
 
         <div className="flex-shrink-0 p-4 md:p-5 lg:p-6 border-t border-border bg-muted/30">
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button variant="outline" fullWidth iconName="Edit" iconPosition="left" onClick={onEdit}>
+            <Button 
+              variant="outline" 
+              fullWidth 
+              iconName="Edit" 
+              iconPosition="left" 
+              onClick={() => onEdit(client)}
+            >
               Modifier
             </Button>
-            <Button variant="default" fullWidth iconName="FileText" iconPosition="left">
+            <Button 
+              variant="default" 
+              fullWidth 
+              iconName="FileText" 
+              iconPosition="left"
+              onClick={handleCreateInvoice}
+            >
               Nouvelle facture
             </Button>
           </div>
