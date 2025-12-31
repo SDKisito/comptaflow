@@ -30,7 +30,7 @@ const InvoiceTableRow = ({ invoice, isSelected, onSelect, onView, onEdit, onDupl
         phone: invoice?.companyPhone || '',
         email: invoice?.companyEmail || '',
         siret: invoice?.companySiret || '',
-        tvaNumber:  invoice?.companyTvaNumber || '
+        tvaNumber:  invoice?.companyTvaNumber ||'',
       };
 
       downloadInvoicePDF(invoice, companyInfo);
