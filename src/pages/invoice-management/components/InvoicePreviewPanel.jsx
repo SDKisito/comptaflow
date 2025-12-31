@@ -162,7 +162,7 @@ const InvoicePreviewPanel = ({ invoice, onClose, onDownloadPDF, onSendEmail }) =
                 phone: invoice?.companyPhone || '',
                 email: invoice?.companyEmail || '',
                 siret: invoice?.companySiret || '',
-                tvaNumber: invoice?.companyTvaNumber || ''
+                tvaNumber: invoice?.companyTvaNumber || '',
               };
 
               downloadInvoicePDF(invoice, companyInfo);
