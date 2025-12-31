@@ -15,6 +15,7 @@ import InvoiceStatsCards from './components/InvoiceStatsCards';
 import { trackFeature, trackEngagement } from '../../utils/analytics';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import jsPDF from 'jspdf';
 
 const InvoiceManagement = () => {
   const { user } = useAuth();
@@ -64,7 +65,7 @@ const InvoiceManagement = () => {
         dueDate: invoice.due_date || new Date().toISOString().split('T')[0],
         amount: parseFloat(invoice.total_amount || 0),
         tvaRate: parseFloat(invoice.tax_rate || 20),
-        status: invoice.status || 'Brouillon',
+        status: invoice.status || 'draft',
         items: invoice.items || [],
         paymentHistory: invoice.payment_history || [],
         notes: invoice.notes || ''
@@ -115,43 +116,6 @@ const InvoiceManagement = () => {
         { description: 'Formation fiscalité', quantity: 2, unitPrice: 650.00, total: 1300.00 }
       ],
       notes: 'Facture envoyée par email le 05/12/2024. Rappel automatique prévu le 20/12/2024.'
-    },
-    {
-      id: 'mock-3',
-      invoiceNumber: 'FAC-2024-003',
-      clientName: 'Cabinet Lefebvre',
-      clientEmail: 'contact@cabinet-lefebvre.fr',
-      clientAddress: '78 Boulevard Haussmann, 75009 Paris',
-      issueDate: '2024-11-20',
-      dueDate: '2024-12-20',
-      amount: 1850.00,
-      tvaRate: 20,
-      status: 'En retard',
-      items: [
-        { description: 'Gestion de paie mensuelle', quantity: 1, unitPrice: 1200.00, total: 1200.00 },
-        { description: 'Déclarations sociales', quantity: 1, unitPrice: 650.00, total: 650.00 }
-      ],
-      notes: 'Paiement en retard de 4 jours. Relance envoyée le 21/12/2024.'
-    },
-    {
-      id: 'mock-4',
-      invoiceNumber: 'FAC-2024-004',
-      clientName: 'Boutique Bernard',
-      clientEmail: 'info@boutique-bernard.fr',
-      clientAddress: '34 Rue du Commerce, 33000 Bordeaux',
-      issueDate: '2024-12-10',
-      dueDate: '2025-01-10',
-      amount: 3200.00,
-      tvaRate: 20,
-      status: 'Partiellement payée',
-      items: [
-        { description: 'Tenue de comptabilité trimestrielle', quantity: 1, unitPrice: 2400.00, total: 2400.00 },
-        { description: 'Conseil en gestion', quantity: 1, unitPrice: 800.00, total: 800.00 }
-      ],
-      paymentHistory: [
-        { date: '2024-12-18', amount: 1600.00, method: 'Chèque' }
-      ],
-      notes: 'Paiement partiel reçu. Solde restant: 1 920,00 € TTC.'
     }
   ];
 
@@ -203,10 +167,10 @@ const InvoiceManagement = () => {
     return {
       totalInvoices: allInvoices?.length,
       totalAmount: allInvoices?.reduce((sum, inv) => sum + inv?.amount, 0),
-      paidInvoices: allInvoices?.filter(inv => inv?.status === 'Payée')?.length,
-      pendingInvoices: allInvoices?.filter(inv => inv?.status === 'Envoyée')?.length,
-      overdueInvoices: allInvoices?.filter(inv => inv?.status === 'En retard')?.length,
-      draftInvoices: allInvoices?.filter(inv => inv?.status === 'Brouillon')?.length
+      paidInvoices: allInvoices?.filter(inv => inv?.status === 'Payée' || inv?.status === 'paid')?.length,
+      pendingInvoices: allInvoices?.filter(inv => inv?.status === 'Envoyée' || inv?.status === 'sent')?.length,
+      overdueInvoices: allInvoices?.filter(inv => inv?.status === 'En retard' || inv?.status === 'overdue')?.length,
+      draftInvoices: allInvoices?.filter(inv => inv?.status === 'Brouillon' || inv?.status === 'draft')?.length
     };
   }, [allInvoices]);
 
@@ -248,41 +212,253 @@ const InvoiceManagement = () => {
     setSelectedInvoice(invoice);
   };
 
-  const handleEditInvoice = (invoice) => {
-    alert(`Modification de la facture ${invoice?.invoiceNumber}\n\nCette fonctionnalité ouvrira un formulaire d'édition complet avec tous les champs modifiables.`);
+  const handleEditInvoice = async (invoice) => {
+    // Si c'est une facture mockée, on ne peut pas la modifier
+    if (typeof invoice.id === 'string' && invoice.id.startsWith('mock-')) {
+      alert('Cette facture est en lecture seule (données de démonstration)');
+      return;
+    }
+
+    // Demander les nouvelles informations
+    const newClientName = prompt('Nom du client :', invoice.clientName);
+    if (!newClientName) return;
+    
+    const newClientEmail = prompt('Email du client :', invoice.clientEmail);
+    if (!newClientEmail) return;
+    
+    const newAmount = prompt('Montant HT (€) :', invoice.amount);
+    if (!newAmount) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .update({
+          client_name: newClientName,
+          client_email: newClientEmail,
+          total_amount: parseFloat(newAmount),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invoice.id)
+        .eq('user_id', user?.id)
+        .select();
+
+      if (error) throw error;
+      
+      alert('Facture modifiée avec succès !');
+      await loadInvoices(); // Recharger la liste
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      alert('Erreur lors de la modification: ' + error.message);
+    }
   };
 
-  const handleDuplicateInvoice = (invoice) => {
-    alert(`Duplication de la facture ${invoice?.invoiceNumber}\n\nUne nouvelle facture sera créée avec les mêmes informations et un nouveau numéro.`);
+  const handleDuplicateInvoice = async (invoice) => {
+    // Si c'est une facture mockée, on crée quand même une vraie copie
+    const isMocked = typeof invoice.id === 'string' && invoice.id.startsWith('mock-');
+
+    try {
+      // Générer un nouveau numéro de facture
+      const newInvoiceNumber = `FAC-${new Date().getFullYear()}-${String(realInvoices.length + 1).padStart(3, '0')}`;
+      
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert([{
+          user_id: user?.id,
+          invoice_number: newInvoiceNumber,
+          client_name: invoice.clientName,
+          client_email: invoice.clientEmail,
+          client_address: invoice.clientAddress,
+          issue_date: new Date().toISOString().split('T')[0],
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          total_amount: invoice.amount,
+          tax_rate: invoice.tvaRate,
+          status: 'draft',
+          items: invoice.items || [],
+          notes: invoice.notes || ''
+        }])
+        .select();
+
+      if (error) throw error;
+      
+      alert(`Facture dupliquée avec succès !\nNouveau numéro: ${newInvoiceNumber}`);
+      await loadInvoices(); // Recharger la liste
+    } catch (error) {
+      console.error('Error duplicating invoice:', error);
+      alert('Erreur lors de la duplication: ' + error.message);
+    }
   };
 
-  const handleSendInvoice = (invoice) => {
-    alert(`Envoi de la facture ${invoice?.invoiceNumber}\n\nLa facture sera envoyée par email à: ${invoice?.clientEmail}\n\nUn email de confirmation sera envoyé à votre adresse.`);
+  const handleSendInvoice = async (invoice) => {
+    // Si c'est une facture mockée
+    if (typeof invoice.id === 'string' && invoice.id.startsWith('mock-')) {
+      alert(`📧 Envoi simulé de la facture ${invoice.invoiceNumber}\n\nÀ: ${invoice.clientEmail}\n\n⚠️ Cette fonctionnalité nécessite un backend (Supabase Edge Function) pour envoyer de vrais emails.`);
+      return;
+    }
+
+    if (!confirm(`Envoyer la facture ${invoice.invoiceNumber} à ${invoice.clientEmail} ?`)) {
+      return;
+    }
+
+    try {
+      // Mettre à jour le statut en "sent"
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          status: 'sent',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invoice.id)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+      
+      alert(`✅ Facture marquée comme envoyée !\n\n📧 Pour envoyer de vrais emails, configurez une Supabase Edge Function.\n\nVoir la documentation : https://supabase.com/docs/guides/functions`);
+      await loadInvoices();
+    } catch (error) {
+      console.error('Error sending invoice:', error);
+      alert('Erreur: ' + error.message);
+    }
   };
 
-  const handleMarkPaid = (invoice) => {
-    alert(`Marquer comme payée: ${invoice?.invoiceNumber}\n\nLa facture sera marquée comme payée et le statut sera mis à jour dans le système.`);
+  const handleMarkPaid = async (invoice) => {
+    // Si c'est une facture mockée
+    if (typeof invoice.id === 'string' && invoice.id.startsWith('mock-')) {
+      alert('Cette facture est en lecture seule (données de démonstration)');
+      return;
+    }
+
+    if (!confirm(`Marquer la facture ${invoice.invoiceNumber} comme payée ?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          status: 'paid',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invoice.id)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+      
+      alert('✅ Facture marquée comme payée !');
+      await loadInvoices();
+    } catch (error) {
+      console.error('Error marking invoice as paid:', error);
+      alert('Erreur: ' + error.message);
+    }
   };
 
   const handleDownloadPDF = (invoice) => {
     try {
-      const generateInvoicePDF = (invoiceData) => {
-        console.log('Generating PDF for invoice:', invoiceData.invoiceNumber);
-      };
+      // Créer un nouveau document PDF
+      const doc = new jsPDF();
       
-      generateInvoicePDF(invoice);
+      // Configuration
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      let yPos = 20;
+
+      // En-tête
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('FACTURE', margin, yPos);
+      
+      yPos += 10;
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text(invoice.invoiceNumber, margin, yPos);
+      
+      // Informations client
+      yPos += 15;
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Client', margin, yPos);
+      
+      yPos += 8;
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      doc.text(invoice.clientName, margin, yPos);
+      yPos += 6;
+      doc.text(invoice.clientEmail, margin, yPos);
+      if (invoice.clientAddress) {
+        yPos += 6;
+        const addressLines = invoice.clientAddress.split('\n');
+        addressLines.forEach(line => {
+          doc.text(line, margin, yPos);
+          yPos += 6;
+        });
+      }
+
+      // Dates
+      yPos += 10;
+      doc.text(`Date d'émission: ${new Date(invoice.issueDate).toLocaleDateString('fr-FR')}`, margin, yPos);
+      yPos += 6;
+      doc.text(`Date d'échéance: ${new Date(invoice.dueDate).toLocaleDateString('fr-FR')}`, margin, yPos);
+
+      // Articles
+      yPos += 15;
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Articles', margin, yPos);
+      
+      yPos += 10;
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      
+      if (invoice.items && invoice.items.length > 0) {
+        invoice.items.forEach(item => {
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+          doc.text(`${item.description}`, margin, yPos);
+          doc.text(`${item.quantity} x ${item.unitPrice.toFixed(2)} € = ${item.total.toFixed(2)} €`, 
+                   pageWidth - margin - 50, yPos);
+          yPos += 8;
+        });
+      }
+
+      // Totaux
+      yPos += 10;
+      doc.setFont(undefined, 'bold');
+      const montantHT = invoice.amount;
+      const montantTVA = montantHT * (invoice.tvaRate / 100);
+      const montantTTC = montantHT + montantTVA;
+      
+      doc.text(`Montant HT: ${montantHT.toFixed(2)} €`, pageWidth - margin - 60, yPos);
+      yPos += 8;
+      doc.text(`TVA (${invoice.tvaRate}%): ${montantTVA.toFixed(2)} €`, pageWidth - margin - 60, yPos);
+      yPos += 8;
+      doc.setFontSize(14);
+      doc.text(`Total TTC: ${montantTTC.toFixed(2)} €`, pageWidth - margin - 60, yPos);
+
+      // Notes
+      if (invoice.notes) {
+        yPos += 15;
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        doc.text('Notes:', margin, yPos);
+        yPos += 6;
+        const noteLines = doc.splitTextToSize(invoice.notes, pageWidth - 2 * margin);
+        doc.text(noteLines, margin, yPos);
+      }
+
+      // Télécharger le PDF
+      doc.save(`${invoice.invoiceNumber}.pdf`);
+      
       trackFeature?.invoice?.download('pdf');
+      alert('✅ PDF téléchargé avec succès !');
     } catch (error) {
       console.error('Error generating PDF:', error);
+      alert('Erreur lors de la génération du PDF: ' + error.message);
     }
   };
 
   const handleSendEmail = async (invoice) => {
-    try {
-      trackFeature?.invoice?.send();
-    } catch (error) {
-      console.error('Error sending email:', error);
-    }
+    await handleSendInvoice(invoice);
   };
 
   const handlePreview = (invoice) => {
@@ -291,7 +467,7 @@ const InvoiceManagement = () => {
   };
 
   const handleCreateInvoice = async () => {
-    // Demander les informations de base via des prompts simples
+    // Demander les informations de base
     const clientName = prompt('Nom du client :');
     if (!clientName) return;
     
@@ -313,10 +489,10 @@ const InvoiceManagement = () => {
           client_name: clientName,
           client_email: clientEmail,
           issue_date: new Date().toISOString().split('T')[0],
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +30 jours
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           total_amount: parseFloat(amount),
           tax_rate: 20,
-          status: 'Brouillon',
+          status: 'draft',
           items: [],
           notes: ''
         }])
@@ -324,12 +500,12 @@ const InvoiceManagement = () => {
 
       if (error) throw error;
       
-      alert('Facture créée avec succès !');
-      await loadInvoices(); // Recharger la liste
+      alert('✅ Facture créée avec succès !');
+      await loadInvoices();
       trackFeature?.invoice?.create();
     } catch (error) {
       console.error('Error creating invoice:', error);
-      alert('Erreur lors de la création de la facture: ' + error.message);
+      alert('Erreur lors de la création: ' + error.message);
     }
   };
 
@@ -341,10 +517,34 @@ const InvoiceManagement = () => {
     alert(`Marquer ${selectedInvoices?.length} facture(s) comme payées\n\nToutes les factures sélectionnées seront marquées comme payées.`);
   };
 
-  const handleBulkDelete = () => {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer ${selectedInvoices?.length} facture(s) ?\n\nCette action est irréversible.`)) {
-      alert('Factures supprimées avec succès.');
+  const handleBulkDelete = async () => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer ${selectedInvoices?.length} facture(s) ?\n\nCette action est irréversible.`)) {
+      return;
+    }
+
+    try {
+      // Filtrer uniquement les IDs non-mockés
+      const realIds = selectedInvoices.filter(id => !(typeof id === 'string' && id.startsWith('mock-')));
+      
+      if (realIds.length === 0) {
+        alert('Aucune facture réelle sélectionnée (seules les données de démonstration sont sélectionnées)');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .in('id', realIds)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      alert(`✅ ${realIds.length} facture(s) supprimée(s) avec succès !`);
       setSelectedInvoices([]);
+      await loadInvoices();
+    } catch (error) {
+      console.error('Error deleting invoices:', error);
+      alert('Erreur lors de la suppression: ' + error.message);
     }
   };
 
