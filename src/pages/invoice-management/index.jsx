@@ -15,7 +15,7 @@ import InvoiceStatsCards from './components/InvoiceStatsCards';
 import { trackFeature, trackEngagement } from '../../utils/analytics';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import jsPDF from 'jspdf';
+import { downloadInvoicePDF } from '../../utils/pdfGenerator';
 
 const InvoiceManagement = () => {
   const { user } = useAuth();
@@ -353,107 +353,11 @@ const InvoiceManagement = () => {
 
   const handleDownloadPDF = (invoice) => {
     try {
-      // Créer un nouveau document PDF
-      const doc = new jsPDF();
-      
-      // Configuration
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 20;
-      let yPos = 20;
-
-      // En-tête
-      doc.setFontSize(20);
-      doc.setFont(undefined, 'bold');
-      doc.text('FACTURE', margin, yPos);
-      
-      yPos += 10;
-      doc.setFontSize(12);
-      doc.setFont(undefined, 'normal');
-      doc.text(invoice.invoiceNumber, margin, yPos);
-      
-      // Informations client
-      yPos += 15;
-      doc.setFontSize(14);
-      doc.setFont(undefined, 'bold');
-      doc.text('Client', margin, yPos);
-      
-      yPos += 8;
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'normal');
-      doc.text(invoice.clientName, margin, yPos);
-      yPos += 6;
-      doc.text(invoice.clientEmail, margin, yPos);
-      if (invoice.clientAddress) {
-        yPos += 6;
-        const addressLines = invoice.clientAddress.split('\n');
-        addressLines.forEach(line => {
-          doc.text(line, margin, yPos);
-          yPos += 6;
-        });
-      }
-
-      // Dates
-      yPos += 10;
-      doc.text(`Date d'émission: ${new Date(invoice.issueDate).toLocaleDateString('fr-FR')}`, margin, yPos);
-      yPos += 6;
-      doc.text(`Date d'échéance: ${new Date(invoice.dueDate).toLocaleDateString('fr-FR')}`, margin, yPos);
-
-      // Articles
-      yPos += 15;
-      doc.setFontSize(14);
-      doc.setFont(undefined, 'bold');
-      doc.text('Articles', margin, yPos);
-      
-      yPos += 10;
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'normal');
-      
-      if (invoice.items && invoice.items.length > 0) {
-        invoice.items.forEach(item => {
-          if (yPos > 270) {
-            doc.addPage();
-            yPos = 20;
-          }
-          doc.text(`${item.description}`, margin, yPos);
-          doc.text(`${item.quantity} x ${item.unitPrice.toFixed(2)} € = ${item.total.toFixed(2)} €`, 
-                   pageWidth - margin - 50, yPos);
-          yPos += 8;
-        });
-      }
-
-      // Totaux
-      yPos += 10;
-      doc.setFont(undefined, 'bold');
-      const montantHT = invoice.amount;
-      const montantTVA = montantHT * (invoice.tvaRate / 100);
-      const montantTTC = montantHT + montantTVA;
-      
-      doc.text(`Montant HT: ${montantHT.toFixed(2)} €`, pageWidth - margin - 60, yPos);
-      yPos += 8;
-      doc.text(`TVA (${invoice.tvaRate}%): ${montantTVA.toFixed(2)} €`, pageWidth - margin - 60, yPos);
-      yPos += 8;
-      doc.setFontSize(14);
-      doc.text(`Total TTC: ${montantTTC.toFixed(2)} €`, pageWidth - margin - 60, yPos);
-
-      // Notes
-      if (invoice.notes) {
-        yPos += 15;
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'normal');
-        doc.text('Notes:', margin, yPos);
-        yPos += 6;
-        const noteLines = doc.splitTextToSize(invoice.notes, pageWidth - 2 * margin);
-        doc.text(noteLines, margin, yPos);
-      }
-
-      // Télécharger le PDF
-      doc.save(`${invoice.invoiceNumber}.pdf`);
-      
+      downloadInvoicePDF(invoice);
       trackFeature?.invoice?.download('pdf');
-      alert('✅ PDF téléchargé avec succès !');
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Erreur lors de la génération du PDF: ' + error.message);
+      console.error('Error downloading PDF:', error);
+      alert('Erreur lors du téléchargement du PDF: ' + error.message);
     }
   };
 
