@@ -90,11 +90,19 @@ const defaultCompanyInfo = {
     15,
     32
   );
-  doc.text(
-    `Tél: ${defaultCompanyInfo.phone} | Email: ${defaultCompanyInfo.email}`,
-    15,
-    37
-  );
+ let contactLine = '';
+
+ if (defaultCompanyInfo.phone && defaultCompanyInfo.email) {
+  contactLine = `Tél: ${defaultCompanyInfo.phone} | Email: ${defaultCompanyInfo.email}`;
+} else if (defaultCompanyInfo.phone) {
+  contactLine = `Tél: ${defaultCompanyInfo.phone}`;
+} else if (defaultCompanyInfo.email) {
+  contactLine = `Email: ${defaultCompanyInfo.email}`;
+}
+
+if (contactLine) {
+  doc.text(contactLine, 15, 37);
+}
 
   // Invoice title
   doc.setTextColor(...darkGray);
