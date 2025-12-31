@@ -50,9 +50,12 @@ jobs:
         run: |
           curl -fsSL https://supabase.com/install.sh | sh
           echo "$HOME/.supabase/bin" >> $GITHUB_PATH
+
       - name: Deploy Supabase Edge Function
         run: |
-          npm install -g supabase
+          # ❌ NE PAS installer Supabase via npm (interdit)
+          # npm install -g supabase
+
           supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
           supabase functions deploy send-email --no-verify-jwt
