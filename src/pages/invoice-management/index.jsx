@@ -292,14 +292,16 @@ const InvoiceManagement = () => {
 
     try {
       // Récupérer le profil du comptable
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('first_name, last_name, company_name')
+        .select('full_name, company_name')
         .eq('id', user.id)
         .single();
 
+      if (profileError) throw profileError;
+
       const accountantName = profileData 
-        ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || 'Votre Comptable'
+        ? `${profileData.full_name || ''} ${profileData.company_name || ''}`.trim() || 'Votre Comptable'
         : 'Votre Comptable';
 
       // Appeler la Edge Function
