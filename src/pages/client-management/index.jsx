@@ -6,6 +6,7 @@ import ClientCard from './components/ClientCard';
 import ClientDetailsPanel from './components/ClientDetailsPanel';
 import ClientFilters from './components/ClientFilters';
 import AddClientModal from './components/AddClientModal';
+import EditClientModal from './components/EditClientModal';
 import SearchBar from './components/SearchBar';
 import Icon from '../../components/AppIcon';
 import { trackFeature } from '../../utils/analytics';
@@ -21,6 +22,8 @@ const ClientManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [clientToEdit, setClientToEdit] = useState(null);
   const [realClients, setRealClients] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -113,170 +116,6 @@ const ClientManagement = () => {
         { id: 1, author: "Marie Dubois", date: "20/12/2025", content: "Client très satisfait du service. Demande une augmentation de la limite de crédit." },
         { id: 2, author: "Jean Martin", date: "15/12/2025", content: "Paiement reçu pour la facture FAC-2025-0156. Aucun problème signalé." }
       ]
-    },
-    {
-      id: 'mock-2',
-      companyName: "Restaurant Le Gourmet",
-      contactName: "Sophie Martin",
-      email: "contact@legourmet-restaurant.fr",
-      phone: "01 45 23 67 89",
-      siret: "234 567 890 00023",
-      vatNumber: "FR23456789012",
-      billingAddress: "12 Rue de la Paix\n75002 Paris\nFrance",
-      status: "active",
-      outstandingBalance: 0.00,
-      lastActivity: "22/12/2025",
-      paymentTerms: "30 jours",
-      creditLimit: 20000.00,
-      totalInvoices: 36,
-      paidInvoices: 36,
-      pendingInvoices: 0,
-      overdueInvoices: 0,
-      recentInvoices: [
-        { id: 1, number: "FAC-2025-0155", date: "18/12/2025", amount: 3200.00, status: "paid" },
-        { id: 2, number: "FAC-2025-0148", date: "10/12/2025", amount: 2850.00, status: "paid" }
-      ],
-      paymentHistory: [
-        { id: 1, amount: 3200.00, date: "22/12/2025", method: "Virement bancaire", invoiceNumber: "FAC-2025-0155" },
-        { id: 2, amount: 2850.00, date: "15/12/2025", method: "Virement bancaire", invoiceNumber: "FAC-2025-0148" }
-      ],
-      documents: [
-        { id: 1, name: "Contrat annuel 2025.pdf", date: "01/01/2025", size: "320 KB" }
-      ],
-      notes: [
-        { id: 1, author: "Marie Dubois", date: "22/12/2025", content: "Excellent client. Paiements toujours à temps. Envisager une remise de fidélité." }
-      ]
-    },
-    {
-      id: 'mock-3',
-      companyName: "Café des Arts",
-      contactName: "Luc Bernard",
-      email: "l.bernard@cafedesarts.fr",
-      phone: "01 48 76 54 32",
-      siret: "345 678 901 00034",
-      vatNumber: "FR34567890123",
-      billingAddress: "78 Boulevard Saint-Germain\n75005 Paris\nFrance",
-      status: "overdue",
-      outstandingBalance: 1850.00,
-      lastActivity: "10/12/2025",
-      paymentTerms: "30 jours",
-      creditLimit: 10000.00,
-      totalInvoices: 18,
-      paidInvoices: 14,
-      pendingInvoices: 2,
-      overdueInvoices: 2,
-      recentInvoices: [
-        { id: 1, number: "FAC-2025-0140", date: "28/11/2025", amount: 950.00, status: "overdue" },
-        { id: 2, number: "FAC-2025-0135", date: "15/11/2025", amount: 900.00, status: "overdue" },
-        { id: 3, number: "FAC-2025-0125", date: "01/11/2025", amount: 750.00, status: "paid" }
-      ],
-      paymentHistory: [
-        { id: 1, amount: 750.00, date: "10/11/2025", method: "Chèque", invoiceNumber: "FAC-2025-0125" }
-      ],
-      documents: [
-        { id: 1, name: "Contrat de service.pdf", date: "15/06/2025", size: "195 KB" }
-      ],
-      notes: [
-        { id: 1, author: "Jean Martin", date: "18/12/2025", content: "Relance envoyée pour les factures en retard. Client a promis un paiement avant fin décembre." },
-        { id: 2, author: "Marie Dubois", date: "10/12/2025", content: "Difficultés financières temporaires signalées. Surveiller de près." }
-      ]
-    },
-    {
-      id: 'mock-4',
-      companyName: "Hôtel Belle Vue",
-      contactName: "Claire Rousseau",
-      email: "direction@hotel-bellevue.fr",
-      phone: "01 53 42 18 90",
-      siret: "456 789 012 00045",
-      vatNumber: "FR45678901234",
-      billingAddress: "25 Rue du Faubourg Saint-Honoré\n75008 Paris\nFrance",
-      status: "active",
-      outstandingBalance: 4200.00,
-      lastActivity: "24/12/2025",
-      paymentTerms: "45 jours",
-      creditLimit: 30000.00,
-      totalInvoices: 42,
-      paidInvoices: 38,
-      pendingInvoices: 4,
-      overdueInvoices: 0,
-      recentInvoices: [
-        { id: 1, number: "FAC-2025-0158", date: "20/12/2025", amount: 4200.00, status: "pending" },
-        { id: 2, number: "FAC-2025-0150", date: "12/12/2025", amount: 3800.00, status: "paid" }
-      ],
-      paymentHistory: [
-        { id: 1, amount: 3800.00, date: "24/12/2025", method: "Virement bancaire", invoiceNumber: "FAC-2025-0150" }
-      ],
-      documents: [
-        { id: 1, name: "Contrat cadre 2025-2027.pdf", date: "01/01/2025", size: "450 KB" },
-        { id: 2, name: "Avenant n°1.pdf", date: "15/06/2025", size: "120 KB" }
-      ],
-      notes: [
-        { id: 1, author: "Marie Dubois", date: "24/12/2025", content: "Gros client stratégique. Excellent historique de paiement. Renouvellement du contrat prévu en janvier 2026." }
-      ]
-    },
-    {
-      id: 'mock-5',
-      companyName: "Traiteur Saveurs",
-      contactName: "Marc Lefebvre",
-      email: "m.lefebvre@traiteur-saveurs.fr",
-      phone: "01 47 89 23 45",
-      siret: "567 890 123 00056",
-      vatNumber: "FR56789012345",
-      billingAddress: "33 Avenue de l'Opéra\n75002 Paris\nFrance",
-      status: "inactive",
-      outstandingBalance: 0.00,
-      lastActivity: "15/09/2025",
-      paymentTerms: "30 jours",
-      creditLimit: 8000.00,
-      totalInvoices: 12,
-      paidInvoices: 12,
-      pendingInvoices: 0,
-      overdueInvoices: 0,
-      recentInvoices: [
-        { id: 1, number: "FAC-2025-0095", date: "01/09/2025", amount: 1200.00, status: "paid" },
-        { id: 2, number: "FAC-2025-0082", date: "15/08/2025", amount: 950.00, status: "paid" }
-      ],
-      paymentHistory: [
-        { id: 1, amount: 1200.00, date: "15/09/2025", method: "Virement bancaire", invoiceNumber: "FAC-2025-0095" }
-      ],
-      documents: [
-        { id: 1, name: "Contrat de service.pdf", date: "01/03/2025", size: "210 KB" }
-      ],
-      notes: [
-        { id: 1, author: "Jean Martin", date: "20/09/2025", content: "Client inactif depuis 3 mois. Envoyer une relance commerciale pour réactivation." }
-      ]
-    },
-    {
-      id: 'mock-6',
-      companyName: "Épicerie Fine Deluxe",
-      contactName: "Isabelle Moreau",
-      email: "contact@epicerie-deluxe.fr",
-      phone: "01 56 34 78 90",
-      siret: "678 901 234 00067",
-      vatNumber: "FR67890123456",
-      billingAddress: "18 Rue de Rivoli\n75004 Paris\nFrance",
-      status: "active",
-      outstandingBalance: 1650.00,
-      lastActivity: "23/12/2025",
-      paymentTerms: "30 jours",
-      creditLimit: 12000.00,
-      totalInvoices: 28,
-      paidInvoices: 25,
-      pendingInvoices: 3,
-      overdueInvoices: 0,
-      recentInvoices: [
-        { id: 1, number: "FAC-2025-0157", date: "18/12/2025", amount: 1650.00, status: "pending" },
-        { id: 2, number: "FAC-2025-0149", date: "08/12/2025", amount: 1420.00, status: "paid" }
-      ],
-      paymentHistory: [
-        { id: 1, amount: 1420.00, date: "23/12/2025", method: "Carte bancaire", invoiceNumber: "FAC-2025-0149" }
-      ],
-      documents: [
-        { id: 1, name: "Contrat annuel.pdf", date: "01/02/2025", size: "280 KB" }
-      ],
-      notes: [
-        { id: 1, author: "Marie Dubois", date: "23/12/2025", content: "Bon client régulier. Commandes fréquentes et paiements ponctuels." }
-      ]
     }
   ];
 
@@ -329,7 +168,7 @@ const ClientManagement = () => {
       if (error) throw error;
       
       alert('Client créé avec succès !');
-      await loadClients(); // Recharger la liste des clients
+      await loadClients();
       setIsAddModalOpen(false);
       trackFeature?.client?.add();
     } catch (error) {
@@ -344,8 +183,44 @@ const ClientManagement = () => {
   };
 
   const handleEditClient = (client) => {
-    // ... existing edit logic ...
+    // Vérifier si c'est un client mocké
+    if (typeof client.id === 'string' && client.id.startsWith('mock-')) {
+      alert('Ce client est en lecture seule (données de démonstration)');
+      return;
+    }
+    
+    setClientToEdit(client);
+    setIsEditModalOpen(true);
     trackFeature?.client?.edit();
+  };
+
+  const handleSaveEdit = async (clientData) => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .update({
+          name: clientData.companyName,
+          email: clientData.email,
+          phone: clientData.phone,
+          siret: clientData.siret,
+          address: clientData.billingAddress,
+          is_active: clientData.status === 'active'
+        })
+        .eq('id', clientToEdit.id)
+        .eq('user_id', user?.id)
+        .select();
+
+      if (error) throw error;
+      
+      alert('Client modifié avec succès !');
+      await loadClients();
+      setIsEditModalOpen(false);
+      setClientToEdit(null);
+      setSelectedClient(null); // Fermer le panel de détails
+    } catch (error) {
+      console.error('Error updating client:', error);
+      alert('Erreur lors de la modification du client: ' + error.message);
+    }
   };
 
   // Calcul des statistiques avec les vrais clients
@@ -472,17 +347,29 @@ const ClientManagement = () => {
           )}
         </main>
       </div>
+
       {selectedClient && (
         <ClientDetailsPanel
           client={selectedClient}
           onClose={() => setSelectedClient(null)}
-          onEdit={() => console.log('Modifier le client:', selectedClient?.id)}
+          onEdit={handleEditClient}
         />
       )}
+
       <AddClientModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleAddClient}
+      />
+
+      <EditClientModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setClientToEdit(null);
+        }}
+        onSave={handleSaveEdit}
+        client={clientToEdit}
       />
     </div>
   );
