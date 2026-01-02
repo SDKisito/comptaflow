@@ -21,7 +21,7 @@ const ClientDetailsPanel = ({ client, onClose, onEdit }) => {
 
   const handleCreateInvoice = () => {
     // Rediriger vers la page de création de facture avec les données du client pré-remplies
-    navigate('/comptaflow/invoice-management', { 
+    navigate('/invoice-management', { 
       state: { 
         prefilledClient: {
           clientName: client.companyName,
@@ -156,7 +156,7 @@ const ClientDetailsPanel = ({ client, onClose, onEdit }) => {
                 size="sm" 
                 iconName="Eye" 
                 iconPosition="left"
-                onClick={() => navigate(`/comptaflow/invoice-management?invoice=${invoice.id}`)}
+                onClick={() => navigate(`/invoice-management?invoice=${invoice.id}`)}
               >
                 Voir
               </Button>
